@@ -75,6 +75,13 @@ impl BackendStream for WhisperStream<'_> {
     fn last_vad_speech_instant(&self) -> Option<std::time::Instant> {
         self.vad.as_ref().and_then(|v| v.last_speech_instant())
     }
+
+    fn reset(&mut self) {
+        if let Some(ref mut vad) = self.vad {
+            vad.reset();
+        }
+        self.inner.reset();
+    }
 }
 
 impl WhisperBackend {

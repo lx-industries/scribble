@@ -75,6 +75,15 @@ impl<'a> BufferedSegmentTranscriber<'a> {
         Ok(())
     }
 
+    /// Reset state for a new utterance without finalizing.
+    pub(crate) fn reset(&mut self) {
+        self.samples.clear();
+        self.head = 0;
+        self.advanced_samples = 0;
+        self.next_infer_at_samples = self.min_window_samples;
+        self.no_progress_runs = 0;
+    }
+
     fn window(&self) -> &[f32] {
         &self.samples[self.head..]
     }

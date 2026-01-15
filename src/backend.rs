@@ -58,4 +58,10 @@ pub trait BackendStream {
     fn last_vad_speech_instant(&self) -> Option<std::time::Instant> {
         None
     }
+
+    /// Reset the stream state for a new utterance.
+    ///
+    /// Call this between utterances to clear accumulated audio and prevent
+    /// old speech from being re-transcribed with new speech.
+    fn reset(&mut self) {}
 }

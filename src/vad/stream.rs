@@ -126,6 +126,15 @@ impl VadStream {
         self.last_speech_instant
     }
 
+    /// Reset state for a new utterance.
+    pub fn reset(&mut self) {
+        self.pending_tail.clear();
+        self.in_buf.clear();
+        self.out_buf.clear();
+        self.out_cursor = 0;
+        self.last_speech_instant = None;
+    }
+
     fn process_ready_windows(&mut self) -> Result<()> {
         while self.in_buf.len() >= self.window_frames {
             let segment: Vec<f32> = self.in_buf.drain(..self.window_frames).collect();
