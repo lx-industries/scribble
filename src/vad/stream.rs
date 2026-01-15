@@ -141,9 +141,18 @@ impl VadStream {
             }
 
             if !has_speech {
-                // No speech detected in this window - drop it entirely to prevent
-                // Whisper from hallucinating text from silence.
+                // No speech in this window. Output any holdback from previous speech
+                // window to avoid eating the last word, then keep some context from
+                // this window for potential pre-padding if speech starts next.
+                if !self.pending_tail.is_empty() {
+                    self.out_buf.extend_from_slice(&self.pending_tail);
+                }
                 self.pending_tail.clear();
+                // Keep the last holdback_frames as context for potential next speech
+                if self.holdback_frames > 0 && window.len() > self.holdback_frames {
+                    self.pending_tail
+                        .extend_from_slice(&window[window.len() - self.holdback_frames..]);
+                }
                 continue;
             }
 
