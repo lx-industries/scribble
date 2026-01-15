@@ -21,6 +21,8 @@ pub struct VadStream {
     out_buf: Vec<f32>,
     out_cursor: usize,
     last_speech_instant: Option<std::time::Instant>,
+    /// Whether the previous window had speech (for holdback transition logic).
+    previous_window_had_speech: bool,
 }
 
 impl VadStream {
@@ -47,6 +49,7 @@ impl VadStream {
             out_buf: Vec::new(),
             out_cursor: 0,
             last_speech_instant: None,
+            previous_window_had_speech: false,
         }
     }
 
@@ -133,6 +136,7 @@ impl VadStream {
         self.out_buf.clear();
         self.out_cursor = 0;
         self.last_speech_instant = None;
+        self.previous_window_had_speech = false;
     }
 
     fn process_ready_windows(&mut self) -> Result<()> {
@@ -150,10 +154,11 @@ impl VadStream {
             }
 
             if !has_speech {
-                // No speech in this window. Output any holdback from previous speech
-                // window to avoid eating the last word, then keep some context from
-                // this window for potential pre-padding if speech starts next.
-                if !self.pending_tail.is_empty() {
+                // No speech in this window. Only output holdback when transitioning
+                // from speech to silence (to avoid eating the last word). During
+                // continuous silence, discard holdback to prevent feeding Whisper
+                // audio that causes hallucinations.
+                if self.previous_window_had_speech && !self.pending_tail.is_empty() {
                     self.out_buf.extend_from_slice(&self.pending_tail);
                 }
                 self.pending_tail.clear();
@@ -162,6 +167,7 @@ impl VadStream {
                     self.pending_tail
                         .extend_from_slice(&window[window.len() - self.holdback_frames..]);
                 }
+                self.previous_window_had_speech = false;
                 continue;
             }
 
@@ -174,6 +180,7 @@ impl VadStream {
                 self.out_buf.extend_from_slice(&window);
                 self.pending_tail.clear();
             }
+            self.previous_window_had_speech = true;
         }
 
         Ok(())
